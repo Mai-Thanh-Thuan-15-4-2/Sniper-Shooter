@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Bắn Tỉa - Sniper Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1d3a 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+        body.fullscreen {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(180deg, #000814 0%, #001d3d 100%);
+            border: 3px solid #00d9ff;
+            cursor: crosshair;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            color: #00ff88;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+            pointer-events: none;
+        }
+        .ui-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .level-badge {
+            background: linear-gradient(45deg, #ff0080, #ff8c00);
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 10px;
+            box-shadow: 0 0 15px rgba(255, 140, 0, 0.6);
+        }
+        .powerup-badge {
+            background: linear-gradient(45deg, #ffaa00, #ffff00);
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 10px;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.6);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            color: #ff0055;
+            border: 3px solid #ff0055;
+            display: none;
+        }
+        #gameOver h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 15px #ff0055;
+        }
+        #gameOver p {
+            font-size: 14px;
+            color: #00ff88;
+            margin-bottom: 20px;
+        }
+        #restartBtn {
+            padding: 10px 25px;
+            font-size: 12px;
+            background: linear-gradient(45deg, #00ff88, #00d9ff);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #restartBtn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.8);
+        }
+        .health-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0055, #ff6b00, #00ff88);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+        .level-up-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #ff0080, #ff8c00);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 15px #000;
+            box-shadow: 0 0 30px rgba(255, 140, 0, 0.8);
+            animation: levelUpAnim 2s ease-in-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+        @keyframes levelUpAnim {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+        }
+        .powerup-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #ffaa00, #ffff00);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            text-shadow: 0 0 8px #fff;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.8);
+            animation: levelUpAnim 2s ease-in-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .freeze-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #00aaff, #aaffff);
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            text-shadow: 0 0 8px #fff;
+            box-shadow: 0 0 30px rgba(0, 170, 255, 0.8);
+            animation: levelUpAnim 2s ease-in-out;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .freeze-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 170, 255, 0.3) 0%, rgba(170, 255, 255, 0.2) 100%);
+            pointer-events: none;
+            z-index: 50;
+        }
+        .settings-btn {
+            position: absolute;
+            bottom: 70px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            color: #00ff88;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 200;
+        }
+        .settings-btn:hover {
+            background: rgba(0, 255, 136, 0.2);
+            transform: rotate(90deg);
+        }
+        .settings-menu {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 15px;
+            color: #00ff88;
+            font-size: 14px;
+            min-width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 200;
+        }
+        .settings-menu::-webkit-scrollbar {
+            width: 8px;
+        }
+        .settings-menu::-webkit-scrollbar-track {
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 4px;
+        }
+        .settings-menu::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
+        }
+        .settings-menu::-webkit-scrollbar-thumb:hover {
+            background: #00cc66;
+        }
+        .settings-menu.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .settings-item {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+        .settings-title {
+            color: #ffff00;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #pauseIndicator {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        .charge-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .charge-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ffff00 0%, #ff8800 50%, #ff0044 100%);
+            border-radius: 4px;
+            transition: width 0.1s ease-out;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <div class="ui-row">
+                <div id="score">Điểm: 0</div>
+                <div class="level-badge" id="level">Cấp: 1</div>
+            </div>
+            <div class="ui-row">
+                <div id="highScore" style="color: #ffff00; font-size: 14px;">🏆 Cao nhất: 0</div>
+            </div>
+            <div class="ui-row">
+                <div id="freezeAmmo">Băng: 20</div>
+                <div id="specialFreezeAmmo">Đặc biệt Băng: 1</div>
+            </div>
+            <div class="ui-row">
+                <div id="specialTimer">Đặc biệt: OFF</div>
+                <div id="pauseIndicator" style="display: none; color: #ff4444; font-size: 24px; font-weight: bold;">⏸️ PAUSED</div>
+            </div>
+            <div class="ui-row">
+                <div id="chargeContainer" style="display: none; width: 200px; margin-top: 5px;">
+                    <div style="color: #ffff00; font-size: 14px; margin-bottom: 3px;">⚡ Năng lượng</div>
+                    <div class="charge-bar">
+                        <div id="chargeProgress" class="charge-progress"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="health-bar">
+            <div class="health-fill" id="healthFill" style="width: 100%"></div>
+        </div>
+        
+        <div class="settings-btn" id="settingsBtn">⚙️</div>
+        <div class="settings-menu" id="settingsMenu">
+            <div class="settings-title">HƯớng Dẫn Điều Khiển</div>
+            <div class="settings-item"><strong>F11:</strong> Bật/tắt Fullscreen</div>
+            <div class="settings-item"><strong>Space:</strong> Bật/tắt Auto Fire</div>
+            <div class="settings-item"><strong>I:</strong> Đạn Băng thường (5s)</div>
+            <div class="settings-item"><strong>O:</strong> Siêu Đạn Băng (10s)</div>
+            <div class="settings-item"><strong>P:</strong> Tắt Chế độ Đặc biệt</div>
+            <div class="settings-item"><strong>⚙️:</strong> Mở/Đóng Menu (Pause Game)</div>
+            <div class="settings-item"><strong>Giữ Chuột Trái:</strong> Nạp năng lượng (thanh xanh tăng)</div>
+            <div class="settings-item"><strong>Thả Chuột:</strong> Bắn đạn nổ + thanh giảm dần</div>
+            <div class="settings-item"><strong>Mouse:</strong> Di chuyển và bắn</div>
+            <div class="settings-title" style="margin-top: 15px;">Thông Tin Game</div>
+            <div class="settings-item"><span id="multiShotMenu">Tia: 1</span></div>
+            <div class="settings-item"><span id="damageMenu">Sát Thương: -1</span></div>
+            <div class="settings-item"><span id="autoFireMenu">Auto Fire: OFF</span></div>
+            <div class="settings-item">Đạn băng thường: <span id="freezeAmmoMenu">3</span></div>
+            <div class="settings-item">Đạn băng đặc biệt: <span id="specialFreezeAmmoMenu">1</span></div>
+            
+            <div class="settings-title" style="margin-top: 15px;">Hệ Thống Mới</div>
+            <div class="settings-item">• Sát thương cố định: 1 damage mọi level</div>
+            <div class="settings-item">• Tia bắn tăng: Level 5,10,15,20,30</div>
+            <div class="settings-item">• Đạn nạp: 1% = 1 damage</div>
+            <div class="settings-item">• Vùng nổ: Damage giảm theo khoảng cách</div>
+            
+            <div class="settings-title" style="margin-top: 15px;">Tùy Chỉnh</div>
+            <div class="settings-item">
+                <span>Máy bay: </span>
+                <button id="planeBtn" style="background: #00ffff; color: black; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; margin-left: 5px;">Xanh Cyan</button>
+            </div>
+            <div class="settings-item">
+                <span>Đạn: </span>
+                <button id="bulletBtn" style="background: #00ffff; color: black; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; margin-left: 5px;">Xanh Cyan</button>
+            </div>
+            
+            <div class="settings-title" style="margin-top: 15px;">Level Test</div>
+            <div class="settings-item">
+                <span>Chọn Level: </span>
+                <select id="levelSelect" style="background: #333; color: #00ff88; border: 1px solid #00ff88; padding: 3px; border-radius: 3px; cursor: pointer; margin-left: 5px;">
+                    <option value="1">Level 1 (1 tia, -1 dmg, đạn nhỏ)</option>
+                    <option value="5">Level 5 (2 tia, -1 dmg, đạn nhỏ)</option>
+                    <option value="10">Level 10 (3 tia, -1 dmg, đạn nhỏ)</option>
+                    <option value="15">Level 15 (3 tia, -2 dmg, đạn to)</option>
+                    <option value="20">Level 20 (4 tia, -5 dmg, đạn to)</option>
+                    <option value="30">Level 30 (5 tia, -5 dmg, đạn to)</option>
+                </select>
+            </div>
+            
+            <div class="settings-title" style="margin-top: 15px;">Âm Thanh</div>
+            <div class="settings-item">
+                <button id="soundToggleBtn" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Âm thanh: OFF</button>
+            </div>
+        </div>
+        <div id="gameOver">
+            <h2>GAME OVER</h2>
+            <p id="finalScore">Điểm: 0</p>
+            <p id="finalLevel">Cấp độ: 1</p>
+            <button id="restartBtn">Chơi Lại</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const levelEl = document.getElementById('level');
+        const ammoEl = document.getElementById('ammo');
+        const multiShotEl = document.getElementById('multiShot');
+        const damageEl = document.getElementById('damage');
+        const healthFill = document.getElementById('healthFill');
+        const gameOverEl = document.getElementById('gameOver');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalLevelEl = document.getElementById('finalLevel');
+        const restartBtn = document.getElementById('restartBtn');
+        const freezeAmmoEl = document.getElementById('freezeAmmo');
+        const specialFreezeAmmoEl = document.getElementById('specialFreezeAmmo');
+        const specialTimerEl = document.getElementById('specialTimer');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const multiShotMenuEl = document.getElementById('multiShotMenu');
+        const damageMenuEl = document.getElementById('damageMenu');
+        const autoFireMenuEl = document.getElementById('autoFireMenu');
+        let gameRunning = true;
+        let score = 0;
+        let health = 100;
+        let level = 1;
+        let damage = 1;
+        let killCount = 0;
+        let multiShot = 1;
+        let bulletColor = '#00ffff';
+        let autoShootInterval = null;
+        let isMouseDown = false;
+        let powerUpTimer = 0;
+        let freezeAmmo = 20;
+        let specialFreezeAmmo = 1;
+        let autoFire = false;
+        let isFullscreen = false;
+        let specialMode = false;
+        let specialTimeLeft = 0;
+        let gamePaused = false;
+        
+        // Charged shot system
+        let isChargingShot = false;
+        let chargeStartTime = 0;
+        let maxChargeTime = 3000; // 3 giây để nạp đầy
+        let chargeLevel = 0;
+        let chargedShotDamage = 1;
+        let explosionRadius = 50;
+        let chargeDecaying = false;
+        let chargeDecayStart = 0;
+        let chargeDecayDuration = 1500; // 1.5 giây để thanh về 0
+        let chargeLevelAtDecayStart = 0;
+        
+        // Player (máy bay)
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 80,
+            width: 60,
+            height: 40,
+            speed: 12
+        };
+        // Arrays
+        let bullets = [];
+        let enemies = [];
+        let powerUps = [];
+        let particles = [];
+        let frozenEnemies = new Set();
+        let freezeTimeout = 0;
+        let snowflakes = [];
+        let globalFreezeActive = false;
+        let globalFreezeTimeout = 0;
+        let freezeOverlayAlpha = 0;
+        
+        // Customization options
+        let currentPlane = 0; // 0, 1, 2 for different plane styles
+        let currentBulletStyle = 0; // 0, 1, 2 for different bullet styles
+        
+        const planeStyles = [
+            { color: '#00ffff', name: 'Xanh Cyan' },
+            { color: '#ff00ff', name: 'Tím Magenta' },
+            { color: '#ffff00', name: 'Vàng' }
+        ];
+        
+        const bulletStyles = [
+            { color: '#00ffff', name: 'Xanh Cyan', trail: 'rgba(0, 255, 255, 0.6)' },
+            { color: '#ff4444', name: 'Đỏ', trail: 'rgba(255, 68, 68, 0.6)' },
+            { color: '#44ff44', name: 'Xanh Lá', trail: 'rgba(68, 255, 68, 0.6)' }
+        ];
+        
+        // Audio System - Web Audio API
+        let audioContext;
+        let masterVolume = 0.3;
+        let soundEnabled = false; // Tắt âm thanh mặc định
+        
+        // Initialize audio context
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.warn('Web Audio API not supported');
+                soundEnabled = false;
+            }
+        }
+        
+        // Basic sound generation functions
+        function createOscillator(frequency, type = 'sine') {
+            if (!soundEnabled || !audioContext) return null;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = type;
+            
+            return { oscillator, gainNode };
+        }
+        
+        function playTone(frequency, duration, volume = 0.3, type = 'sine', fadeOut = true) {
+            if (!soundEnabled) return;
+            
+            const sound = createOscillator(frequency, type);
+            if (!sound) return;
+            
+            const { oscillator, gainNode } = sound;
+            const now = audioContext.currentTime;
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(volume * masterVolume, now + 0.01);
+            
+            if (fadeOut) {
+                gainNode.gain.linearRampToValueAtTime(volume * masterVolume, now + duration * 0.7);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            } else {
+                gainNode.gain.setValueAtTime(volume * masterVolume, now + duration - 0.01);
+                gainNode.gain.linearRampToValueAtTime(0, now + duration);
+            }
+            
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        }
+        
+        // Shooting sounds
+        function playShootSound() {
+            if (!soundEnabled) return;
+            
+            // Main shot sound - quick high frequency burst
+            playTone(800, 0.1, 0.4, 'square', true);
+            
+            // Add a lower frequency for depth
+            setTimeout(() => {
+                playTone(300, 0.08, 0.2, 'sawtooth', true);
+            }, 10);
+        }
+        
+        function playFreezeShootSound() {
+            if (!soundEnabled) return;
+            
+            // Ice/freeze sound - crystalline high pitch
+            playTone(1200, 0.15, 0.3, 'sine', true);
+            playTone(1800, 0.1, 0.2, 'sine', true);
+            
+            setTimeout(() => {
+                playTone(600, 0.2, 0.15, 'triangle', true);
+            }, 50);
+        }
+        
+        function playSpecialFreezeSound() {
+            if (!soundEnabled) return;
+            
+            // More dramatic freeze sound
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    playTone(1500 + i * 200, 0.3, 0.25, 'sine', true);
+                }, i * 50);
+            }
+            
+            setTimeout(() => {
+                playTone(400, 0.5, 0.3, 'sawtooth', true);
+            }, 100);
+        }
+        
+        function playChargedShotSound(chargeLevel) {
+            if (!soundEnabled) return;
+            
+            // Âm thanh charge shot - mạnh hơn theo mức charge
+            const frequency = 300 + (chargeLevel * 400);
+            const volume = 0.4 + (chargeLevel * 0.3);
+            
+            // Âm thanh chính
+            playTone(frequency, 0.3, volume, 'square', true);
+            
+            // Âm thanh phụ cho explosion
+            setTimeout(() => {
+                playTone(150, 0.5, volume * 0.8, 'sawtooth', true);
+            }, 100);
+            
+            // Hiệu ứng reverb
+            for (let i = 1; i <= 3; i++) {
+                setTimeout(() => {
+                    playTone(frequency * 0.8, 0.2, volume * 0.3, 'sine', true);
+                }, i * 150);
+            }
+        }
+        
+        // Enemy sounds
+        function playEnemyHitSound() {
+            if (!soundEnabled) return;
+            
+            // Enemy hit - short burst
+            playTone(200, 0.15, 0.3, 'square', true);
+            playTone(150, 0.1, 0.2, 'sawtooth', true);
+        }
+        
+        function playEnemyDeathSound() {
+            if (!soundEnabled) return;
+            
+            // Enemy death - descending tone
+            const sound = createOscillator(300, 'square');
+            if (!sound) return;
+            
+            const { oscillator, gainNode } = sound;
+            const now = audioContext.currentTime;
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.4 * masterVolume, now + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            
+            oscillator.frequency.setValueAtTime(300, now);
+            oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 0.4);
+        }
+        
+        function playEnemySpawnSound() {
+            if (!soundEnabled) return;
+            
+            // Enemy spawn - rising tone
+            playTone(100, 0.3, 0.2, 'sawtooth', false);
+            
+            setTimeout(() => {
+                playTone(200, 0.2, 0.15, 'triangle', true);
+            }, 100);
+        }
+        
+        // Power-up sounds
+        function playPowerUpSound() {
+            if (!soundEnabled) return;
+            
+            // Ascending musical notes
+            const notes = [261, 329, 392, 523]; // C, E, G, C (major chord)
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    playTone(freq, 0.2, 0.3, 'sine', true);
+                }, i * 80);
+            });
+        }
+        
+        function playLevelUpSound() {
+            if (!soundEnabled) return;
+            
+            // Victory fanfare
+            const melody = [523, 659, 784, 1047]; // C, E, G, C (octave higher)
+            melody.forEach((freq, i) => {
+                setTimeout(() => {
+                    playTone(freq, 0.3, 0.4, 'triangle', true);
+                }, i * 150);
+            });
+        }
+        
+        // Game state sounds
+        function playGameOverSound() {
+            if (!soundEnabled) return;
+            
+            // Dramatic descending tones
+            const descending = [400, 350, 300, 250, 200, 150, 100];
+            descending.forEach((freq, i) => {
+                setTimeout(() => {
+                    playTone(freq, 0.4, 0.3, 'sawtooth', true);
+                }, i * 100);
+            });
+        }
+        
+        // Background music removed - only sound effects
+        
+        // Special effect sounds
+        function playGlobalFreezeSound() {
+            if (!soundEnabled) return;
+            
+            // Dramatic freeze effect
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    playTone(2000 - i * 150, 0.8, 0.2, 'sine', true);
+                }, i * 80);
+            }
+            
+            setTimeout(() => {
+                playTone(200, 1.0, 0.3, 'triangle', true);
+            }, 500);
+        }
+        
+        // Initialize audio when page loads
+        window.addEventListener('load', () => {
+            // Wait for first user interaction to initialize audio context
+            const initAudioOnInteraction = () => {
+                initAudio();
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                // Remove listeners after first interaction
+                document.removeEventListener('click', initAudioOnInteraction);
+                document.removeEventListener('keydown', initAudioOnInteraction);
+            };
+            
+            document.addEventListener('click', initAudioOnInteraction);
+            document.addEventListener('keydown', initAudioOnInteraction);
+        });
+        
+        // Classes
+        class ChargedBullet {
+            constructor(x, y, chargeLevel, angle = 0) {
+                this.x = x;
+                this.y = y;
+                this.initialSpeedX = Math.sin(angle * Math.PI / 180) * 3; // Tốc độ ngang ban đầu nhỏ
+                this.speedX = this.initialSpeedX;
+                this.speedY = -20; // Chậm hơn đạn thường
+                this.radius = 6 + (chargeLevel * 6); // To hơn nhiều theo charge level - giảm 1/2
+                this.trail = [];
+                this.chargeLevel = chargeLevel;
+                // Sát thương = % charge (0-100)
+                this.damage = Math.floor(chargeLevel * 100);
+                this.explosionRadius = 60 + (chargeLevel * 40); // Vùng nổ lớn hơn
+                this.color = this.getChargeColor(chargeLevel);
+                this.glowIntensity = 0;
+            }
+            
+            getChargeColor(level) {
+                if (level <= 0.3) return '#ffff00'; // Vàng
+                else if (level <= 0.6) return '#ff8800'; // Cam
+                else return '#ff0044'; // Đỏ
+            }
+            
+            update() {
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 15) this.trail.shift();
+                
+                // Tăng dần speedX để tách ra xa hơn khi bay lên
+                this.speedX *= 1.02; // Tăng 2% mỗi frame
+                
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.glowIntensity += 0.1;
+            }
+            
+            draw() {
+                // Trail effect lớn hơn
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    const alpha = i / this.trail.length;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, this.radius * alpha * 0.8, 0, Math.PI * 2);
+                    const trailAlpha = alpha * 0.5;
+                    if (this.chargeLevel <= 0.3) {
+                        ctx.fillStyle = `rgba(255, 255, 0, ${trailAlpha})`;
+                    } else if (this.chargeLevel <= 0.6) {
+                        ctx.fillStyle = `rgba(255, 136, 0, ${trailAlpha})`;
+                    } else {
+                        ctx.fillStyle = `rgba(255, 0, 68, ${trailAlpha})`;
+                    }
+                    ctx.fill();
+                }
+                
+                // Main bullet với glow mạnh hơn
+                ctx.save();
+                ctx.shadowBlur = 40 + Math.sin(this.glowIntensity) * 15;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                // Inner core lớn hơn
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                
+                // Outer ring effect
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.6;
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+            
+            explode() {
+                // Tạo explosion particles nhiều hơn
+                const particleCount = 30 + (this.chargeLevel * 50);
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new ExplosionParticle(
+                        this.x, this.y, this.color, this.explosionRadius
+                    ));
+                }
+                
+                // Gây sát thương cho kẻ thù trong vùng nổ với sát thương giảm dần theo khoảng cách
+                enemies.forEach((enemy, index) => {
+                    const dist = Math.sqrt(
+                        Math.pow(enemy.x + enemy.width/2 - this.x, 2) + 
+                        Math.pow(enemy.y + enemy.height/2 - this.y, 2)
+                    );
+                    if (dist <= this.explosionRadius) {
+                        // Sát thương giảm dần từ tâm nổ (100% ở tâm, giảm xuống 20% ở rìa)
+                        const distanceRatio = 1 - (dist / this.explosionRadius);
+                        const actualDamage = Math.max(1, Math.floor(this.damage * (0.2 + distanceRatio * 0.8)));
+                        
+                        const isDead = enemy.takeDamage(actualDamage);
+                        if (isDead) {
+                            frozenEnemies.delete(enemy);
+                            createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color, 25);
+                            enemies.splice(index, 1);
+                            const pointsForKill = 10 + ((level - 1) * 5);
+                            score += pointsForKill;
+                            killCount++;
+                            scoreEl.textContent = `Điểm: ${score}`;
+                            playEnemyDeathSound();
+                            if (killCount >= 8) {
+                                levelUp();
+                            }
+                        } else {
+                            playEnemyHitSound();
+                        }
+                    }
+                });
+            }
+        }
+        
+        class ExplosionParticle {
+            constructor(x, y, color, maxRadius) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 8 + 2;
+                this.speedX = Math.cos(angle) * speed;
+                this.speedY = Math.sin(angle) * speed;
+                this.radius = Math.random() * 6 + 3;
+                this.color = color;
+                this.life = 1;
+                this.decay = 0.02;
+                this.maxDistance = maxRadius;
+                this.startX = x;
+                this.startY = y;
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= this.decay;
+                this.radius *= 0.98;
+                
+                // Giảm tốc độ
+                this.speedX *= 0.95;
+                this.speedY *= 0.95;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        class Bullet {
+            constructor(x, y, color, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.speedX = 0;
+                this.speedY = -25;
+                // Kích thước đạn theo level - giảm xuống 1/2
+                if (level >= 15) this.radius = 3; // Đạn to hơn từ level 15 (6/2 = 3)
+                else this.radius = 2; // Đạn thường (4/2 = 2)
+                this.trail = [];
+                this.damage = damage;
+                this.color = color || bulletStyles[currentBulletStyle].color;
+                this.type = type; // 'normal', 'freeze', 'special'
+            }
+            update() {
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > 12) this.trail.shift();
+                this.x += this.speedX;
+                this.y += this.speedY;
+            }
+            draw() {
+                const style = bulletStyles[currentBulletStyle];
+                // Trail effect with current bullet color
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    const alpha = i / this.trail.length;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, this.radius * alpha, 0, Math.PI * 2);
+                    const trailColor = style.trail.replace('0.6', (alpha * 0.6).toString());
+                    ctx.fillStyle = trailColor;
+                    ctx.fill();
+                }
+                // Main bullet
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            isOffScreen() {
+                return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
+            }
+        }
+        class Enemy {
+            constructor() {
+                this.width = 45;
+                this.height = 45;
+                this.x = Math.random() * (canvas.width - this.width);
+                this.y = -this.height;
+                this.speed = 0.5 + Math.random() * 0.6;
+                this.health = Math.floor((level + 1) * 2 + Math.random() * 3);
+                this.maxHealth = this.health;
+                this.fontSize = 18;
+            }
+            
+            getColorByHealth() {
+                if (this.health <= 10) return { bg: '#4CAF50', border: '#2E7D32', text: '#FFFFFF' }; // Xanh lá
+                else if (this.health <= 20) return { bg: '#2196F3', border: '#1565C0', text: '#FFFFFF' }; // Xanh dương  
+                else if (this.health <= 50) return { bg: '#FFEB3B', border: '#F57F17', text: '#000000' }; // Vàng
+                else if (this.health <= 100) return { bg: '#FF9800', border: '#E65100', text: '#FFFFFF' }; // Cam
+                else return { bg: '#F44336', border: '#C62828', text: '#FFFFFF' }; // Đỏ
+            }
+            update() {
+                // Kiểm tra global freeze hoặc individual freeze
+                if (!frozenEnemies.has(this) && !globalFreezeActive) {
+                    this.y += this.speed;
+                } else if (globalFreezeActive && !frozenEnemies.has(this)) {
+                    // Chậm lại 70% khi bị global freeze
+                    this.y += this.speed * 0.3;
+                }
+                this.fontSize = 16 + (this.health / this.maxHealth) * 8;
+            }
+            draw() {
+                const colors = this.getColorByHealth();
+                
+                // Frozen effect - chỉ có nền khi đóng băng
+                if (frozenEnemies.has(this)) {
+                    ctx.fillStyle = '#aaffff';
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#00aaff';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                } else if (globalFreezeActive) {
+                    // Hiệu ứng global freeze - nền trong suốt với shadow
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#88ddff';
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+                ctx.shadowBlur = 0;
+                
+                // Border màu theo số máu - không có nền
+                ctx.strokeStyle = globalFreezeActive ? '#00aaff' : colors.border;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+                // Hiển thị số máu hoặc emoji băng
+                if (frozenEnemies.has(this)) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `bold ${Math.min(this.fontSize + 4, 24)}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('❄️', this.x + this.width / 2, this.y + this.height / 2);
+                } else {
+                    ctx.fillStyle = colors.border; // Màu số giống màu border
+                    ctx.font = `bold ${this.fontSize}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.health.toString(), this.x + this.width / 2, this.y + this.height / 2);
+                }
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'alphabetic';
+                if (this.health < this.maxHealth) {
+                    const barWidth = this.width;
+                    const barHeight = 6;
+                    ctx.fillStyle = '#ff4444';
+                    ctx.fillRect(this.x, this.y - 10, barWidth, barHeight);
+                    ctx.fillStyle = '#44ff44';
+                    ctx.fillRect(this.x, this.y - 10, (this.health / this.maxHealth) * barWidth, barHeight);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(this.x, this.y - 10, barWidth, barHeight);
+                }
+            }
+            takeDamage(dmg) {
+                this.health -= dmg;
+                return this.health <= 0;
+            }
+            isOffScreen() {
+                return this.y > canvas.height;
+            }
+        }
+        class PowerUp {
+            constructor() {
+                this.width = 35;
+                this.height = 35;
+                this.x = Math.random() * (canvas.width - this.width);
+                this.y = -this.height;
+                this.speed = 0.8;
+                this.color = '#ffaa00';
+                this.glow = 0;
+                this.health = 3;
+                this.maxHealth = 3;
+            }
+            update() {
+                this.y += this.speed;
+                this.glow += 0.2;
+            }
+            draw() {
+                ctx.save();
+                ctx.shadowBlur = 30 + Math.sin(this.glow) * 10;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                ctx.restore();
+                
+                // Thanh máu
+                if (this.health < this.maxHealth) {
+                    const barWidth = this.width;
+                    const barHeight = 6;
+                    ctx.fillStyle = '#ff4444';
+                    ctx.fillRect(this.x, this.y - 10, barWidth, barHeight);
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(this.x, this.y - 10, (this.health / this.maxHealth) * barWidth, barHeight);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(this.x, this.y - 10, barWidth, barHeight);
+                }
+                
+                // Icon sao với số
+                ctx.fillStyle = '#ffff00';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⭐', this.x + this.width / 2, this.y + this.height / 2 - 4);
+                ctx.fillText(this.health.toString(), this.x + this.width / 2, this.y + this.height / 2 + 8);
+            }
+            takeDamage(dmg) {
+                this.health -= dmg;
+                return this.health <= 0;
+            }
+            isOffScreen() {
+                return this.y > canvas.height;
+            }
+        }
+        class Snowflake {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = -10;
+                this.speed = Math.random() * 2 + 1;
+                this.size = Math.random() * 8 + 4;
+                this.sway = Math.random() * 0.02 + 0.01;
+                this.swayOffset = Math.random() * Math.PI * 2;
+                this.life = 1;
+            }
+            
+            update() {
+                this.y += this.speed;
+                this.x += Math.sin(Date.now() * this.sway + this.swayOffset) * 0.5;
+                if (this.y > canvas.height + 20) {
+                    this.y = -10;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('❄️', this.x, this.y);
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.speedX = (Math.random() - 0.5) * 10;
+                this.speedY = (Math.random() - 0.5) * 10;
+                this.radius = Math.random() * 4 + 2;
+                this.color = color;
+                this.life = 1;
+                this.decay = 0.025;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= this.decay;
+                this.radius *= 0.96;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+        function startAutoShoot() {
+            if (autoShootInterval) return;
+            autoShootInterval = setInterval(() => {
+                if (!gameRunning || !isMouseDown) return;
+                // Bắn multi tia với lệch nhẹ
+                const centerX = player.x + player.width / 2;
+                const centerY = player.y + player.height / 2;
+                const spread = 15; // Độ lan
+                for (let i = 0; i < multiShot; i++) {
+                    const offset = (i - (multiShot - 1) / 2) * spread;
+                    const bullet = new Bullet(centerX + offset, centerY, bulletStyles[currentBulletStyle].color);
+                    bullet.speedX = offset * 0.1; // Lệch nhẹ theo hướng
+                    bullets.push(bullet);
+                }
+                playShootSound(); // Thêm âm thanh bắn
+            }, 120);
+        }
+        function stopAutoShoot() {
+            if (autoShootInterval) {
+                clearInterval(autoShootInterval);
+                autoShootInterval = null;
+            }
+        }
+        function activatePowerUp() {
+            // Random giữa 2 loại power up
+            if (Math.random() < 0.5) {
+                activateSpecialMode();
+            } else {
+                // Cho đạn đặc biệt băng
+                specialFreezeAmmo += 2;
+                console.log('Cộng 2 đạn băng đặc biệt, tổng:', specialFreezeAmmo);
+                specialFreezeAmmoEl.textContent = `Đặc biệt Băng: ${specialFreezeAmmo}`;
+                
+                const popup = document.createElement('div');
+                popup.className = 'freeze-popup';
+                popup.textContent = `+2 SIÊU BĂNG! ❄️⚡`;
+                document.getElementById('gameContainer').appendChild(popup);
+                setTimeout(() => popup.remove(), 2000);
+                
+                createExplosion(player.x + player.width / 2, player.y + player.height / 2, '#00aaff', 40);
+            }
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    isFullscreen = true;
+                    document.body.classList.add('fullscreen');
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    // Reset player position
+                    player.x = canvas.width / 2;
+                    player.y = canvas.height - 80;
+                });
+            } else {
+                document.exitFullscreen().then(() => {
+                    isFullscreen = false;
+                    document.body.classList.remove('fullscreen');
+                    canvas.width = 800;
+                    canvas.height = 600;
+                    // Reset player position  
+                    player.x = canvas.width / 2;
+                    player.y = canvas.height - 80;
+                });
+            }
+        }
+        
+        function shootFreezeBullet() {
+            if (freezeAmmo <= 0) return;
+            freezeAmmo--;
+            freezeAmmoEl.textContent = `Băng: ${freezeAmmo}`;
+            
+            // Kích hoạt global freeze effect
+            activateGlobalFreeze();
+            playFreezeShootSound(); // Thêm âm thanh đạn băng
+        }
+        
+        function activateGlobalFreeze() {
+            globalFreezeActive = true;
+            globalFreezeTimeout = 600; // 10 giây at 60fps
+            freezeOverlayAlpha = 0.4;
+            playGlobalFreezeSound(); // Thêm âm thanh freeze toàn cầu
+            
+            // Tạo nhiều bông tuyết trên toàn màn hình
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const snow = new Snowflake();
+                    snow.x = Math.random() * canvas.width;
+                    snow.y = Math.random() * canvas.height;
+                    snowflakes.push(snow);
+                }, i * 100);
+            }
+            
+            // Popup
+            const popup = document.createElement('div');
+            popup.className = 'freeze-popup';
+            popup.textContent = `BĂNG GIÁ TOÀN CẦU! ❄️`;
+            document.getElementById('gameContainer').appendChild(popup);
+            setTimeout(() => popup.remove(), 2000);
+            
+            createExplosion(player.x + player.width / 2, player.y + player.height / 2, '#00aaff', 50);
+        }
+        
+        function activateSuperFreeze() {
+            if (specialFreezeAmmo <= 0) {
+                console.log('Không có đạn băng đặc biệt!');
+                return;
+            }
+            console.log('Sử dụng đạn băng đặc biệt, còn lại:', specialFreezeAmmo - 1);
+            specialFreezeAmmo--;
+            specialFreezeAmmoEl.textContent = `Đặc biệt Băng: ${specialFreezeAmmo}`;
+            
+            // Hiệu ứng mạnh hơn và lâu hơn
+            globalFreezeActive = true;
+            globalFreezeTimeout = 600; // 10 giây
+            freezeOverlayAlpha = 0.6; // Mạnh hơn
+            playSpecialFreezeSound(); // Thêm âm thanh đặc biệt
+            
+            // Đóng băng hoàn toàn tất cả enemy
+            enemies.forEach(enemy => {
+                frozenEnemies.add(enemy);
+                setTimeout(() => frozenEnemies.delete(enemy), 10000); // 10 giây
+            });
+            
+            // Tạo nhiều bông tuyết hơn
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => {
+                    const snow = new Snowflake();
+                    snow.x = Math.random() * canvas.width;
+                    snow.y = Math.random() * canvas.height;
+                    snow.size = Math.random() * 12 + 8; // To hơn
+                    snowflakes.push(snow);
+                }, i * 50);
+            }
+            
+            // Popup đặc biệt
+            const popup = document.createElement('div');
+            popup.className = 'powerup-popup';
+            popup.textContent = `SIÊU BĂNG GIÁ! ❄️⚡`;
+            document.getElementById('gameContainer').appendChild(popup);
+            setTimeout(() => popup.remove(), 3000);
+            
+            // Hiệu ứng nổ mạnh hơn
+            createExplosion(player.x + player.width / 2, player.y + player.height / 2, '#00aaff', 80);
+            
+            // Screen shake effect
+            canvas.style.transform = 'translate(2px, 2px)';
+            setTimeout(() => canvas.style.transform = 'translate(-2px, -2px)', 100);
+            setTimeout(() => canvas.style.transform = 'translate(0px, 0px)', 200);
+        }
+        
+        function updateMenuInfo() {
+            multiShotMenuEl.textContent = `Tia: ${multiShot}`;
+            damageMenuEl.textContent = `Sát Thương: ${damage} (Cố định)`;
+            autoFireMenuEl.textContent = `Auto Fire: ${autoFire ? 'ON' : 'OFF'}`;
+            // Cập nhật thông tin đạn băng trong menu
+            if (document.getElementById('freezeAmmoMenu')) {
+                document.getElementById('freezeAmmoMenu').textContent = freezeAmmo;
+            }
+            if (document.getElementById('specialFreezeAmmoMenu')) {
+                document.getElementById('specialFreezeAmmoMenu').textContent = specialFreezeAmmo;
+            }
+        }
+        
+        function checkAmmoStatus() {
+            console.log('Trạng thái đạn:');
+            console.log('- Đạn băng thường:', freezeAmmo);
+            console.log('- Đạn băng đặc biệt:', specialFreezeAmmo);
+        }
+        
+        function activateSpecialMode() {
+            specialMode = true;
+            specialTimeLeft = 600; // 10 seconds at 60fps
+            multiShot = 5;
+            bulletColor = '#ffaa00';
+            updateMenuInfo();
+            
+            // Popup
+            const popup = document.createElement('div');
+            popup.className = 'powerup-popup';
+            popup.textContent = `CHẾ ĐỘ ĐẶC BIỆT! ⭐`;
+            document.getElementById('gameContainer').appendChild(popup);
+            setTimeout(() => popup.remove(), 2000);
+            
+            createExplosion(player.x + player.width / 2, player.y + player.height / 2, '#ffff00', 40);
+        }
+        
+
+        function explodePlayer() {
+            gameRunning = false;
+            createExplosion(player.x + player.width / 2, player.y + player.height / 2, '#ff0055', 60);
+            setTimeout(() => {
+                gameOver();
+            }, 800);
+        }
+        // Event Listeners
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            player.x = Math.max(0, Math.min(canvas.width - player.width, mouseX - player.width / 2));
+        });
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isMouseDown = true;
+            
+            // Bắt đầu charge shot
+            if (!chargeDecaying) {
+                isChargingShot = true;
+                chargeStartTime = Date.now();
+                chargeLevel = 0;
+                document.getElementById('chargeContainer').style.display = 'block';
+            }
+            
+            startAutoShoot();
+        });
+        canvas.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            isMouseDown = false;
+            
+            // Bắn charged shot nếu đã charge đủ lâu - số viên theo multiShot
+            if (isChargingShot && chargeLevel > 0.1) {
+                const centerX = player.x + player.width / 2;
+                const centerY = player.y + player.height / 2;
+                
+                // Bắn số viên charged bullet theo multiShot hiện tại
+                for (let i = 0; i < multiShot; i++) {
+                    let offsetX = 0;
+                    let angle = 0;
+                    if (multiShot > 1) {
+                        // Tính toán spread theo số tia - cách xa nhau hơn
+                        const spread = 60; // Tăng góc spread từ 30 lên 60 độ
+                        angle = (spread / (multiShot - 1)) * i - spread / 2;
+                        offsetX = Math.sin(angle * Math.PI / 180) * 40; // Tăng khoảng cách từ 15 lên 40
+                    }
+                    
+                    const chargedBullet = new ChargedBullet(centerX + offsetX, centerY, chargeLevel, angle);
+                    bullets.push(chargedBullet);
+                }
+                
+                // Phát âm thanh charge shot
+                playChargedShotSound(chargeLevel);
+            }
+            
+            // Bắt đầu hiệu ứng decay
+            isChargingShot = false;
+            if (chargeLevel > 0.1) {
+                chargeDecaying = true;
+                chargeDecayStart = Date.now();
+                chargeLevelAtDecayStart = chargeLevel;
+            } else {
+                chargeLevel = 0;
+                document.getElementById('chargeContainer').style.display = 'none';
+            }
+            
+            stopAutoShoot();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                // Toggle auto fire
+                autoFire = !autoFire;
+                updateMenuInfo();
+                
+                if (autoFire) {
+                    isMouseDown = true;
+                    startAutoShoot();
+                } else {
+                    isMouseDown = false;
+                    stopAutoShoot();
+                }
+            }
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+            if (e.key.toLowerCase() === 'i') {
+                e.preventDefault();
+                shootFreezeBullet();
+            }
+            if (e.key.toLowerCase() === 'o') {
+                e.preventDefault();
+                console.log('Nhấn phím O - Sử dụng đạn băng đặc biệt');
+                checkAmmoStatus();
+                activateSuperFreeze(); // Sử dụng đạn đặc biệt băng
+            }
+            if (e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                if (specialMode) {
+                    // Tắt chế độ đặc biệt sớm
+                    specialTimeLeft = 0;
+                }
+            }
+        });
+        restartBtn.addEventListener('click', () => {
+            // Đóng modal game over trước khi restart
+            gameOverEl.style.display = 'none';
+            restartGame();
+        });
+        
+        // Settings menu toggle with pause
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsMenu.classList.toggle('show');
+            gamePaused = settingsMenu.classList.contains('show');
+            document.getElementById('pauseIndicator').style.display = gamePaused ? 'block' : 'none';
+        });
+        
+        // Đóng menu khi click ngoài và unpause
+        document.addEventListener('click', (e) => {
+            if (!settingsMenu.contains(e.target) && !settingsBtn.contains(e.target)) {
+                settingsMenu.classList.remove('show');
+                gamePaused = false;
+                document.getElementById('pauseIndicator').style.display = 'none';
+            }
+        });
+        
+        // Sound toggle button
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundToggleBtn.textContent = soundEnabled ? 'Âm thanh: ON' : 'Âm thanh: OFF';
+            soundToggleBtn.style.background = soundEnabled ? '#00ff88' : '#ff4444';
+            
+            if (soundEnabled && gameRunning) {
+                // Khởi tạo lại audio context nếu cần
+                if (!audioContext) {
+                    initAudio();
+                }
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }
+        });
+        
+        // Plane style toggle button
+        const planeBtn = document.getElementById('planeBtn');
+        planeBtn.addEventListener('click', () => {
+            currentPlane = (currentPlane + 1) % planeStyles.length;
+            const style = planeStyles[currentPlane];
+            planeBtn.textContent = style.name;
+            planeBtn.style.background = style.color;
+            planeBtn.style.color = style.color === '#ffff00' ? 'black' : 'white';
+        });
+        
+        // Bullet style toggle button
+        const bulletBtn = document.getElementById('bulletBtn');
+        bulletBtn.addEventListener('click', () => {
+            currentBulletStyle = (currentBulletStyle + 1) % bulletStyles.length;
+            const style = bulletStyles[currentBulletStyle];
+            bulletColor = style.color; // Update global bullet color
+            bulletBtn.textContent = style.name;
+            bulletBtn.style.background = style.color;
+            bulletBtn.style.color = style.color === '#ffff00' ? 'black' : 'white';
+        });
+
+        // Level selector event listener
+        const levelSelect = document.getElementById('levelSelect');
+        levelSelect.addEventListener('change', () => {
+            const selectedLevel = parseInt(levelSelect.value);
+            level = selectedLevel;
+            
+            // Cập nhật hệ thống theo level
+            if (level >= 20) damage = 5;
+            else if (level >= 15) damage = 2;
+            else damage = 1;
+            
+            if (level >= 30) multiShot = 5;
+            else if (level >= 20) multiShot = 4;
+            else if (level >= 15) multiShot = 3;
+            else if (level >= 10) multiShot = 3;
+            else if (level >= 5) multiShot = 2;
+            else multiShot = 1;
+            
+            // Cập nhật UI
+            levelEl.textContent = `Cấp: ${level}`;
+            updateMenuInfo();
+            
+            // Popup thông báo
+            const popup = document.createElement('div');
+            popup.className = 'level-up-popup';
+            popup.textContent = `CHUYỂN ĐỔI LEVEL ${level}! 🎯`;
+            document.getElementById('gameContainer').appendChild(popup);
+            setTimeout(() => popup.remove(), 2000);
+        });
+        
+        function spawnEnemy() {
+            enemies.push(new Enemy());
+            playEnemySpawnSound(); // Thêm âm thanh enemy spawn
+        }
+        function spawnPowerUp() {
+            powerUps.push(new PowerUp());
+        }
+        function createExplosion(x, y, color, count = 20) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        function checkChargedBulletCollision(bullet) {
+            for (let enemy of enemies) {
+                const dist = Math.sqrt(
+                    Math.pow(enemy.x + enemy.width/2 - bullet.x, 2) + 
+                    Math.pow(enemy.y + enemy.height/2 - bullet.y, 2)
+                );
+                if (dist <= bullet.radius + 10) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        function levelUp() {
+            level++;
+            killCount = 0;
+            // XÓA HẾT ENEMY
+            enemies = [];
+            // Reset spawn
+            lastSpawn = 0;
+            playLevelUpSound(); // Thêm âm thanh level up
+            
+            // Hệ thống sát thương theo level
+            if (level >= 20) damage = 5;
+            else if (level >= 15) damage = 2;
+            else damage = 1;
+            
+            // Tăng số tia bắn theo level: 5, 10, 15, 20, 30
+            if (level >= 30) multiShot = 5;
+            else if (level >= 20) multiShot = 4;
+            else if (level >= 15) multiShot = 3;
+            else if (level >= 10) multiShot = 3; // Sửa từ 2 thành 3
+            else if (level >= 5) multiShot = 2;
+            else multiShot = 1;
+            
+            levelEl.textContent = `Cấp: ${level}`;
+            updateMenuInfo();
+            // Level up popup
+            const popup = document.createElement('div');
+            popup.className = 'level-up-popup';
+            popup.textContent = `LÊN CẤP ${level}! 🎉`;
+            document.getElementById('gameContainer').appendChild(popup);
+            setTimeout(() => popup.remove(), 2000);
+        }
+        function updateGame() {
+            if (!gameRunning || gamePaused) return;
+            
+            // Cập nhật charge level và thanh progress
+            if (isChargingShot) {
+                const currentTime = Date.now();
+                const chargeTime = currentTime - chargeStartTime;
+                chargeLevel = Math.min(1, chargeTime / maxChargeTime);
+                
+                const chargePercent = chargeLevel * 100;
+                const chargeProgress = document.getElementById('chargeProgress');
+                chargeProgress.style.width = chargePercent + '%';
+            }
+            
+            // Xử lý hiệu ứng decay của thanh progress
+            if (chargeDecaying) {
+                const currentTime = Date.now();
+                const decayTime = currentTime - chargeDecayStart;
+                const decayProgress = Math.min(1, decayTime / chargeDecayDuration);
+                
+                // Sử dụng easing function để decay mượt mà hơn
+                const easeOut = 1 - Math.pow(1 - decayProgress, 3);
+                const currentPercent = Math.floor(chargeLevelAtDecayStart * (1 - easeOut) * 100);
+                
+                const chargeProgress = document.getElementById('chargeProgress');
+                chargeProgress.style.width = currentPercent + '%';
+                
+                // Khi decay xong
+                if (decayProgress >= 1) {
+                    chargeDecaying = false;
+                    chargeLevel = 0;
+                    document.getElementById('chargeContainer').style.display = 'none';
+                }
+            }
+            
+            // Handle special mode timer
+            if (specialMode) {
+                specialTimeLeft--;
+                specialTimerEl.textContent = `Đặc biệt: ${Math.ceil(specialTimeLeft / 60)}s`;
+                if (specialTimeLeft <= 0) {
+                    specialMode = false;
+                    // Trả về số tia theo level thay vì reset về 1
+                    if (level >= 30) multiShot = 5;
+                    else if (level >= 20) multiShot = 4;
+                    else if (level >= 15) multiShot = 3;
+                    else if (level >= 10) multiShot = 3; // Sửa từ 2 thành 3
+                    else if (level >= 5) multiShot = 2;
+                    else multiShot = 1;
+                    bulletColor = '#00ffff';
+                    specialTimerEl.textContent = 'Đặc biệt: OFF';
+                    updateMenuInfo();
+                }
+            }
+            
+            // Handle global freeze timeout
+            if (globalFreezeActive) {
+                globalFreezeTimeout--;
+                if (globalFreezeTimeout <= 0) {
+                    globalFreezeActive = false;
+                    freezeOverlayAlpha = 0;
+                }
+            }
+            
+            // Handle individual freeze timeout
+            if (freezeTimeout > 0) {
+                freezeTimeout--;
+                if (freezeTimeout === 0) {
+                    frozenEnemies.clear();
+                }
+            }
+            // Update bullets
+            bullets.forEach((bullet, bIndex) => {
+                bullet.update();
+                if (bullet.y < -10 || bullet.x < -10 || bullet.x > canvas.width + 10) {
+                    bullets.splice(bIndex, 1);
+                }
+                
+                // Nếu là ChargedBullet và va chạm với kẻ thù hoặc ra khỏi màn hình
+                if (bullet instanceof ChargedBullet && 
+                    (bullet.y <= 0 || checkChargedBulletCollision(bullet))) {
+                    bullet.explode();
+                    bullets.splice(bIndex, 1);
+                }
+            });
+            // Update enemies
+            enemies.forEach((enemy, eIndex) => {
+                enemy.update();
+                bullets.forEach((bullet, bIndex) => {
+                    if (checkCollision(
+                        {x: bullet.x - bullet.radius, y: bullet.y - bullet.radius, width: bullet.radius * 2, height: bullet.radius * 2},
+                        enemy
+                    )) {
+                        // Hiệu ứng đặc biệt cho loại đạn khác (không còn xử lý freeze bullet ở đây)
+                        
+                        const isDead = enemy.takeDamage(bullet.damage);
+                        bullets.splice(bIndex, 1);
+                        
+                        if (isDead) {
+                            frozenEnemies.delete(enemy);
+                            createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color, 25);
+                            enemies.splice(eIndex, 1);
+                            // Điểm tăng theo cấp số cộng: level 1 = 10 điểm, level 2 = 15 điểm, level 3 = 20 điểm...
+                            const pointsForKill = 10 + ((level - 1) * 5);
+                            score += pointsForKill;
+                            killCount++;
+                            scoreEl.textContent = `Điểm: ${score}`;
+                            playEnemyDeathSound(); // Thêm âm thanh enemy chết
+                            if (killCount >= 8) {
+                                levelUp();
+                            }
+                            return; // Tránh loop error
+                        } else {
+                            playEnemyHitSound(); // Thêm âm thanh enemy bị trúng đạn
+                        }
+                    }
+                });
+                if (checkCollision(player, enemy)) {
+                    createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, '#ff0055', 15);
+                    enemies.splice(eIndex, 1);
+                    health -= 15;
+                    healthFill.style.width = Math.max(0, health) + '%';
+                    if (health <= 0) {
+                        explodePlayer();
+                    }
+                    return;
+                }
+                if (enemy.isOffScreen()) {
+                    enemies.splice(eIndex, 1);
+                    health -= 8;
+                    healthFill.style.width = Math.max(0, health) + '%';
+                    if (health <= 0) {
+                        explodePlayer();
+                    }
+                }
+            });
+            // Update powerUps - check bullet collision instead of player collision
+            powerUps.forEach((powerUp, pIndex) => {
+                powerUp.update();
+                
+                // Check if bullets hit powerUp
+                bullets.forEach((bullet, bIndex) => {
+                    if (checkCollision(
+                        {x: bullet.x - bullet.radius, y: bullet.y - bullet.radius, width: bullet.radius * 2, height: bullet.radius * 2},
+                        powerUp
+                    )) {
+                        const isDead = powerUp.takeDamage(bullet.damage);
+                        bullets.splice(bIndex, 1);
+                        if (isDead) {
+                            activatePowerUp();
+                            powerUps.splice(pIndex, 1);
+                            playPowerUpSound(); // Thêm âm thanh power-up
+                        }
+                        return;
+                    }
+                });
+                
+                if (powerUp.isOffScreen()) {
+                    powerUps.splice(pIndex, 1);
+                }
+            });
+            // Update particles
+            particles = particles.filter(particle => {
+                particle.update();
+                if (particle instanceof ExplosionParticle) {
+                    return particle.life > 0;
+                }
+                return !particle.isDead();
+            });
+            
+            // Update snowflakes
+            snowflakes.forEach(snowflake => {
+                snowflake.update();
+            });
+            // Giới hạn số lượng snowflakes
+            if (snowflakes.length > 30) {
+                snowflakes = snowflakes.slice(-20);
+            }
+        }
+        function drawGame() {
+            // Background với hiệu ứng freeze
+            if (globalFreezeActive) {
+                ctx.fillStyle = `rgba(0, 170, 255, ${freezeOverlayAlpha * 0.3})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = `rgba(0, 8, 20, ${0.15 - freezeOverlayAlpha * 0.1})`;
+            } else {
+                ctx.fillStyle = 'rgba(0, 8, 20, 0.15)';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Stars
+            for (let i = 0; i < 60; i++) {
+                const x = (i * 137.456) % canvas.width;
+                const y = (i * 891.012 + Date.now() * 0.015) % canvas.height;
+                ctx.fillStyle = `rgba(255, 255, ${200 + Math.sin(Date.now() * 0.001 + i) * 55}, 0.8)`;
+                ctx.fillRect(x, y, 1.5, 1.5);
+            }
+            particles.forEach(particle => particle.draw());
+            snowflakes.forEach(snowflake => snowflake.draw());
+            powerUps.forEach(powerUp => powerUp.draw());
+            bullets.forEach(bullet => bullet.draw());
+            enemies.forEach(enemy => enemy.draw());
+            // Draw player with customizable style
+            const planeStyle = planeStyles[currentPlane];
+            ctx.save();
+            
+            if (currentPlane === 0) {
+                // Kiểu chi tiết (xanh cyan)
+                ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+                ctx.fillStyle = planeStyle.color;
+                ctx.beginPath();
+                ctx.moveTo(0, -20);
+                ctx.lineTo(-25, 15);
+                ctx.lineTo(-15, 10);
+                ctx.lineTo(15, 10);
+                ctx.lineTo(25, 15);
+                ctx.lineTo(0, -20);
+                ctx.fill();
+                
+                // Cánh phụ
+                const wingColor = planeStyle.color === '#00ffff' ? '#00cc66' : 
+                                 (planeStyle.color === '#ff00ff' ? '#cc00cc' : '#cccc00');
+                ctx.fillStyle = wingColor;
+                ctx.beginPath();
+                ctx.moveTo(-18, 0);
+                ctx.lineTo(-35, 8);
+                ctx.lineTo(-25, 12);
+                ctx.lineTo(-8, 5);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(18, 0);
+                ctx.lineTo(35, 8);
+                ctx.lineTo(25, 12);
+                ctx.lineTo(8, 5);
+                ctx.fill();
+                ctx.restore();
+            } else if (currentPlane === 1) {
+                // Kiểu mũi tên (tím)
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = planeStyle.color;
+                ctx.fillStyle = planeStyle.color;
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width / 2, player.y);
+                ctx.lineTo(player.x + 5, player.y + player.height * 0.7);
+                ctx.lineTo(player.x + player.width * 0.3, player.y + player.height);
+                ctx.lineTo(player.x + player.width * 0.7, player.y + player.height);
+                ctx.lineTo(player.x + player.width - 5, player.y + player.height * 0.7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            } else {
+                // Kiểu chữ nhật (vàng)
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = planeStyle.color;
+                ctx.fillStyle = planeStyle.color;
+                
+                // Thân máy bay
+                ctx.fillRect(player.x + player.width * 0.35, player.y, player.width * 0.3, player.height * 0.6);
+                // Cánh chính
+                ctx.fillRect(player.x, player.y + player.height * 0.3, player.width, player.height * 0.25);
+                // Đôi cánh sau
+                ctx.fillRect(player.x + player.width * 0.25, player.y + player.height * 0.7, player.width * 0.5, player.height * 0.3);
+                
+                // Viền sáng
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(player.x + player.width * 0.35, player.y, player.width * 0.3, player.height * 0.6);
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+            ctx.shadowBlur = 0;
+        }
+        // Hàm lấy high score từ localStorage
+        function getHighScore() {
+            return parseInt(localStorage.getItem('shootingGameHighScore') || '0');
+        }
+        
+        // Hàm lưu high score vào localStorage
+        function saveHighScore(newScore) {
+            const currentHigh = getHighScore();
+            if (newScore > currentHigh) {
+                localStorage.setItem('shootingGameHighScore', newScore.toString());
+                return true; // Trả về true nếu là kỷ lục mới
+            }
+            return false;
+        }
+        
+        function gameOver() {
+            const isNewRecord = saveHighScore(score);
+            const highScore = getHighScore();
+            
+            finalScoreEl.textContent = `Điểm: ${score}`;
+            finalLevelEl.textContent = `Cấp độ: ${level}`;
+            
+            // Hiển thị high score và thông báo kỷ lục mới
+            if (isNewRecord && score > 0) {
+                finalScoreEl.innerHTML = `Điểm: ${score} <span style="color: #ffff00; font-weight: bold;">🏆 Kỷ Lục MỚI!</span>`;
+            } else {
+                finalScoreEl.innerHTML = `Điểm: ${score}<br><span style="color: #00ff88; font-size: 14px;">Kỷ lục cao nhất: ${highScore}</span>`;
+            }
+            
+            gameOverEl.style.display = 'block';
+            stopAutoShoot();
+            playGameOverSound(); // Thêm âm thanh game over
+        }
+        function restartGame() {
+            gameRunning = true;
+            score = 0;
+            
+            // Cập nhật hiển thị high score
+            const highScore = getHighScore();
+            document.getElementById('highScore').textContent = `🏆 Cao nhất: ${highScore}`;
+            health = 100;
+            level = 1;
+            damage = 1; // Sát thương cố định
+            killCount = 0;
+            multiShot = 1; // Bắt đầu với 1 tia
+            bulletColor = '#00ffff';
+            bullets = [];
+            enemies = [];
+            powerUps = [];
+            particles = [];
+            snowflakes = [];
+            freezeAmmo = 3;
+            specialFreezeAmmo = 1; // Bắt đầu với 1 đạn đặc biệt băng
+            console.log('Khởi tạo game - Đạn băng đặc biệt:', specialFreezeAmmo);
+            autoFire = false;
+            specialMode = false;
+            specialTimeLeft = 0;
+            frozenEnemies.clear();
+            freezeTimeout = 0;
+            globalFreezeActive = false;
+            globalFreezeTimeout = 0;
+            freezeOverlayAlpha = 0;
+            player.x = canvas.width / 2;
+            isMouseDown = false;
+            stopAutoShoot();
+            powerUpTimer = 0;
+            lastSpawn = 0;
+            scoreEl.textContent = 'Điểm: 0';
+            levelEl.textContent = 'Cấp: 1';
+            ammoEl.textContent = 'Đạn: ∞';
+            freezeAmmoEl.textContent = 'Băng: 3';
+            specialFreezeAmmoEl.textContent = 'Đặc biệt Băng: 1';
+            specialTimerEl.textContent = 'Đặc biệt: OFF';
+            updateMenuInfo();
+            settingsMenu.classList.remove('show');
+            healthFill.style.width = '100%';
+            gameOverEl.style.display = 'none';
+            gamePaused = false;
+            document.getElementById('pauseIndicator').style.display = 'none';
+            
+            // Reset charge state
+            isChargingShot = false;
+            chargeLevel = 0;
+            chargeStartTime = 0;
+            chargeDecaying = false;
+            chargeDecayStart = 0;
+            chargeLevelAtDecayStart = 0;
+            document.getElementById('chargeContainer').style.display = 'none';
+        }
+        let lastSpawn = 0;
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            if (gameRunning && !gamePaused) {
+                lastSpawn++;
+                const spawnRate = Math.max(25, 45 - (level * 2.5));
+                if (lastSpawn > spawnRate) {
+                    spawnEnemy();
+                    lastSpawn = 0;
+                }
+                // Spawn power-up lâu lâu (khoảng 15-30s)
+                powerUpTimer++;
+                if (powerUpTimer > 900 + Math.floor(Math.random() * 600)) { // ~15-25s @60fps
+                    spawnPowerUp();
+                    powerUpTimer = 0;
+                }
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+    </script>
+</body>
+</html>
