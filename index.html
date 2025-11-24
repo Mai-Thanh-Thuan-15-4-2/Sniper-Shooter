@@ -301,7 +301,20 @@
             background: linear-gradient(90deg, #ffff00 0%, #ff8800 50%, #ff0044 100%);
             border-radius: 4px;
             transition: width 0.1s ease-out;
-            box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.8);
+        }
+        
+        /* Animation cho enemy border */
+        @keyframes enemyBorderGlow {
+            0% {
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3);
+            }
+            100% {
+                box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            }
         }
     </style>
 </head>
@@ -324,17 +337,17 @@
                 <div id="specialTimer">Đặc biệt: OFF</div>
                 <div id="pauseIndicator" style="display: none; color: #ff4444; font-size: 24px; font-weight: bold;">⏸️ PAUSED</div>
             </div>
-            <div class="ui-row">
-                <div id="chargeContainer" style="display: none; width: 200px; margin-top: 5px;">
-                    <div style="color: #ffff00; font-size: 14px; margin-bottom: 3px;">⚡ Năng lượng</div>
-                    <div class="charge-bar">
-                        <div id="chargeProgress" class="charge-progress"></div>
-                    </div>
-                </div>
-            </div>
+
         </div>
         <div class="health-bar">
             <div class="health-fill" id="healthFill" style="width: 100%"></div>
+        </div>
+        
+        <!-- Thanh năng lượng ở giữa màn hình phía trên -->
+        <div id="chargeContainer" style="display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 300px; z-index: 10;">
+            <div class="charge-bar">
+                <div id="chargeProgress" class="charge-progress"></div>
+            </div>
         </div>
         
         <div class="settings-btn" id="settingsBtn">⚙️</div>
@@ -353,7 +366,7 @@
             <div class="settings-item"><span id="multiShotMenu">Tia: 1</span></div>
             <div class="settings-item"><span id="damageMenu">Sát Thương: -1</span></div>
             <div class="settings-item"><span id="autoFireMenu">Auto Fire: OFF</span></div>
-            <div class="settings-item">Đạn băng thường: <span id="freezeAmmoMenu">3</span></div>
+            <div class="settings-item">Đạn băng thường: <span id="freezeAmmoMenu">20</span></div>
             <div class="settings-item">Đạn băng đặc biệt: <span id="specialFreezeAmmoMenu">1</span></div>
             
             <div class="settings-title" style="margin-top: 15px;">Hệ Thống Mới</div>
@@ -484,6 +497,21 @@
             { color: '#ff4444', name: 'Đỏ', trail: 'rgba(255, 68, 68, 0.6)' },
             { color: '#44ff44', name: 'Xanh Lá', trail: 'rgba(68, 255, 68, 0.6)' }
         ];
+        
+        // Background Image
+        let backgroundImage = new Image();
+        backgroundImage.src = 'background/background.jpg';
+        let backgroundLoaded = false;
+        
+        backgroundImage.onload = function() {
+            backgroundLoaded = true;
+            console.log('Background image loaded successfully');
+        };
+        
+        backgroundImage.onerror = function() {
+            console.warn('Failed to load background image, using default background');
+            backgroundLoaded = false;
+        };
         
         // Audio System - Web Audio API
         let audioContext;
@@ -939,11 +967,47 @@
             }
             
             getColorByHealth() {
-                if (this.health <= 10) return { bg: '#4CAF50', border: '#2E7D32', text: '#FFFFFF' }; // Xanh lá
-                else if (this.health <= 20) return { bg: '#2196F3', border: '#1565C0', text: '#FFFFFF' }; // Xanh dương  
-                else if (this.health <= 50) return { bg: '#FFEB3B', border: '#F57F17', text: '#000000' }; // Vàng
-                else if (this.health <= 100) return { bg: '#FF9800', border: '#E65100', text: '#FFFFFF' }; // Cam
-                else return { bg: '#F44336', border: '#C62828', text: '#FFFFFF' }; // Đỏ
+                if (this.health <= 10) {
+                    return { 
+                        gradientStart: '#4CAF50', 
+                        gradientEnd: '#2E7D32', 
+                        border: '#1B5E20', 
+                        text: '#FFFFFF',
+                        shadowColor: '#4CAF50'
+                    }; // Xanh lá gradient
+                } else if (this.health <= 20) {
+                    return { 
+                        gradientStart: '#2196F3', 
+                        gradientEnd: '#1565C0', 
+                        border: '#0D47A1', 
+                        text: '#FFFFFF',
+                        shadowColor: '#2196F3'
+                    }; // Xanh dương gradient
+                } else if (this.health <= 50) {
+                    return { 
+                        gradientStart: '#FFEB3B', 
+                        gradientEnd: '#F57F17', 
+                        border: '#E65100', 
+                        text: '#000000',
+                        shadowColor: '#FFB300'
+                    }; // Vàng gradient
+                } else if (this.health <= 100) {
+                    return { 
+                        gradientStart: '#FF9800', 
+                        gradientEnd: '#E65100', 
+                        border: '#BF360C', 
+                        text: '#FFFFFF',
+                        shadowColor: '#FF6F00'
+                    }; // Cam gradient
+                } else {
+                    return { 
+                        gradientStart: '#F44336', 
+                        gradientEnd: '#C62828', 
+                        border: '#B71C1C', 
+                        text: '#FFFFFF',
+                        shadowColor: '#D32F2F'
+                    }; // Đỏ gradient
+                }
             }
             update() {
                 // Kiểm tra global freeze hoặc individual freeze
@@ -958,25 +1022,171 @@
             draw() {
                 const colors = this.getColorByHealth();
                 
-                // Frozen effect - chỉ có nền khi đóng băng
+                ctx.save();
+                
+                // Bo góc cho enemy
+                const cornerRadius = 8;
+                
+                // Không vẽ nền, chỉ vẽ border gradient
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, cornerRadius);
+                
+                // Border gradient theo màu máu với hiệu ứng đóng băng
+                let borderGradient;
                 if (frozenEnemies.has(this)) {
-                    ctx.fillStyle = '#aaffff';
-                    ctx.shadowBlur = 20;
+                    // Border gradient xanh băng khi đóng băng
+                    borderGradient = ctx.createLinearGradient(this.x, this.y, this.x + this.width, this.y + this.height);
+                    borderGradient.addColorStop(0, '#00aaff');
+                    borderGradient.addColorStop(0.25, '#4dc7ff');
+                    borderGradient.addColorStop(0.5, '#88ddff');
+                    borderGradient.addColorStop(0.75, '#4dc7ff');
+                    borderGradient.addColorStop(1, '#00aaff');
+                    
+                    // Hiệu ứng glow băng
+                    ctx.shadowBlur = 15;
                     ctx.shadowColor = '#00aaff';
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
-                } else if (globalFreezeActive) {
-                    // Hiệu ứng global freeze - nền trong suốt với shadow
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#88ddff';
                 } else {
-                    ctx.shadowBlur = 0;
+                    // Border gradient bình thường theo màu máu
+                    borderGradient = ctx.createLinearGradient(this.x, this.y, this.x + this.width, this.y + this.height);
+                    borderGradient.addColorStop(0, colors.border);
+                    borderGradient.addColorStop(0.25, colors.gradientStart);
+                    borderGradient.addColorStop(0.5, colors.gradientEnd);
+                    borderGradient.addColorStop(0.75, colors.gradientStart);
+                    borderGradient.addColorStop(1, colors.border);
+                    
+                    // Glow nhẹ theo màu
+                    if (globalFreezeActive) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = '#88ddff';
+                    } else {
+                        ctx.shadowBlur = 6;
+                        ctx.shadowColor = colors.shadowColor;
+                    }
                 }
+                
+                // Vẽ border gradient với độ dày lớn hơn
+                ctx.strokeStyle = borderGradient;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                
+                // Reset shadow
                 ctx.shadowBlur = 0;
                 
-                // Border màu theo số máu - không có nền
-                ctx.strokeStyle = globalFreezeActive ? '#00aaff' : colors.border;
-                ctx.lineWidth = 3;
+                // Border màu theo số máu với hiệu ứng ánh sáng chạy theo border
+                const borderColor = globalFreezeActive ? '#00aaff' : colors.border;
+                
+                // Tạo hiệu ứng ánh sáng chạy quanh border mượt mà hơn
+                const time = Date.now() * 0.001; // Chậm hơn để mượt mà
+                const glowIntensity = (Math.sin(time * 2) + 1) * 0.3; // Nhẹ hơn
+                
+                // Vẽ border chính
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 2;
                 ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+                // Tạo 2 hiệu ứng ánh sáng chạy đối diện nhau
+                const perimeter = (this.width + this.height) * 2;
+                const lightPosition1 = (time * 120) % perimeter; // Ánh sáng thứ nhất
+                const lightPosition2 = (lightPosition1 + perimeter / 2) % perimeter; // Ánh sáng thứ hai đối diện
+                
+                ctx.save();
+                
+                // Hàm helper để tính vị trí ánh sáng
+                const getLightPosition = (position) => {
+                    if (position < this.width) {
+                        return { x: this.x + position, y: this.y };
+                    } else if (position < this.width + this.height) {
+                        return { x: this.x + this.width, y: this.y + (position - this.width) };
+                    } else if (position < this.width * 2 + this.height) {
+                        return { x: this.x + this.width - (position - this.width - this.height), y: this.y + this.height };
+                    } else {
+                        return { x: this.x, y: this.y + this.height - (position - this.width * 2 - this.height) };
+                    }
+                };
+                
+                // Hàm vẽ ánh sáng với màu trắng vàng pha
+                const drawLight = (position, isSecondLight = false) => {
+                    const lightPos = getLightPosition(position);
+                    
+                    // Tạo màu trắng vàng pha với màu border
+                    let lightColor;
+                    if (globalFreezeActive) {
+                        // Khi freeze: xanh băng pha trắng
+                        lightColor = isSecondLight ? '#AAFFFF' : '#FFFFFF';
+                    } else {
+                        // Bình thường: màu border pha với vàng trắng
+                        const r = parseInt(borderColor.slice(1, 3), 16);
+                        const g = parseInt(borderColor.slice(3, 5), 16);
+                        const b = parseInt(borderColor.slice(5, 7), 16);
+                        
+                        // Pha với trắng vàng
+                        const mixedR = Math.min(255, r + (isSecondLight ? 100 : 150));
+                        const mixedG = Math.min(255, g + (isSecondLight ? 80 : 130));
+                        const mixedB = Math.min(255, b + (isSecondLight ? 20 : 60));
+                        
+                        lightColor = `#${mixedR.toString(16).padStart(2, '0')}${mixedG.toString(16).padStart(2, '0')}${mixedB.toString(16).padStart(2, '0')}`;
+                    }
+                    
+                    // Vẽ điểm sáng chính
+                    const lightGradient = ctx.createRadialGradient(lightPos.x, lightPos.y, 0, lightPos.x, lightPos.y, 8);
+                    lightGradient.addColorStop(0, lightColor + 'FF');
+                    lightGradient.addColorStop(0.3, lightColor + 'CC');
+                    lightGradient.addColorStop(0.6, borderColor + '88');
+                    lightGradient.addColorStop(0.9, borderColor + '33');
+                    lightGradient.addColorStop(1, borderColor + '00');
+                    
+                    ctx.fillStyle = lightGradient;
+                    ctx.beginPath();
+                    ctx.arc(lightPos.x, lightPos.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Tạo đuôi ánh sáng
+                    const tailLength = 35;
+                    const tailSegments = 10;
+                    
+                    for (let i = 1; i <= tailSegments; i++) {
+                        const tailAlpha = (1 - (i / tailSegments)) * 0.7;
+                        const tailSize = 8 * (1 - (i / tailSegments) * 0.8);
+                        const segmentDistance = (tailLength / tailSegments) * i;
+                        
+                        let backPosition = (position - segmentDistance + perimeter) % perimeter;
+                        const tailPos = getLightPosition(backPosition);
+                        
+                        // Gradient cho đuôi với màu pha
+                        const tailGradient = ctx.createRadialGradient(tailPos.x, tailPos.y, 0, tailPos.x, tailPos.y, tailSize);
+                        const tailColorAlpha = Math.floor(tailAlpha * 255).toString(16).padStart(2, '0');
+                        const borderColorAlpha = Math.floor(tailAlpha * 0.4 * 255).toString(16).padStart(2, '0');
+                        
+                        tailGradient.addColorStop(0, lightColor + tailColorAlpha);
+                        tailGradient.addColorStop(0.5, borderColor + borderColorAlpha);
+                        tailGradient.addColorStop(1, borderColor + '00');
+                        
+                        ctx.fillStyle = tailGradient;
+                        ctx.beginPath();
+                        ctx.arc(tailPos.x, tailPos.y, tailSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                };
+                
+                // Vẽ 2 ánh sáng đối diện nhau
+                drawLight(lightPosition1, false); // Ánh sáng chính
+                drawLight(lightPosition2, true);  // Ánh sáng đối diện
+                
+                // Hiệu ứng glow nhẹ cho toàn bộ border với bo góc
+                ctx.shadowBlur = 4 + (glowIntensity * 8);
+                ctx.shadowColor = borderColor;
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 2;
+                
+                // Vẽ border với bo góc
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, cornerRadius);
+                ctx.stroke();
+                
+                ctx.restore();
+                
+                // Reset shadow cho các element khác
+                ctx.shadowBlur = 0;
                 
                 // Hiển thị số máu hoặc emoji băng
                 if (frozenEnemies.has(this)) {
@@ -996,14 +1206,58 @@
                 ctx.textBaseline = 'alphabetic';
                 if (this.health < this.maxHealth) {
                     const barWidth = this.width;
-                    const barHeight = 6;
-                    ctx.fillStyle = '#ff4444';
-                    ctx.fillRect(this.x, this.y - 10, barWidth, barHeight);
-                    ctx.fillStyle = '#44ff44';
-                    ctx.fillRect(this.x, this.y - 10, (this.health / this.maxHealth) * barWidth, barHeight);
-                    ctx.strokeStyle = '#000';
+                    const barHeight = 8;
+                    const barRadius = 4; // Bo góc cho thanh máu
+                    
+                    // Nền thanh máu với gradient
+                    ctx.beginPath();
+                    ctx.roundRect(this.x, this.y - 12, barWidth, barHeight, barRadius);
+                    
+                    const bgGradient = ctx.createLinearGradient(this.x, this.y - 12, this.x, this.y - 4);
+                    bgGradient.addColorStop(0, '#333333');
+                    bgGradient.addColorStop(1, '#555555');
+                    ctx.fillStyle = bgGradient;
+                    ctx.fill();
+                    
+                    // Thanh máu hiện tại với gradient
+                    const healthWidth = (this.health / this.maxHealth) * barWidth;
+                    if (healthWidth > 0) {
+                        ctx.beginPath();
+                        ctx.roundRect(this.x, this.y - 12, healthWidth, barHeight, barRadius);
+                        
+                        const healthGradient = ctx.createLinearGradient(this.x, this.y - 12, this.x, this.y - 4);
+                        const healthRatio = this.health / this.maxHealth;
+                        
+                        if (healthRatio > 0.6) {
+                            // Máu nhiều - xanh lá
+                            healthGradient.addColorStop(0, '#4CAF50');
+                            healthGradient.addColorStop(1, '#2E7D32');
+                        } else if (healthRatio > 0.3) {
+                            // Máu trung bình - vàng
+                            healthGradient.addColorStop(0, '#FFB300');
+                            healthGradient.addColorStop(1, '#FF8F00');
+                        } else {
+                            // Máu ít - đỏ
+                            healthGradient.addColorStop(0, '#F44336');
+                            healthGradient.addColorStop(1, '#C62828');
+                        }
+                        
+                        ctx.fillStyle = healthGradient;
+                        ctx.fill();
+                        
+                        // Hiệu ứng sáng cho thanh máu
+                        ctx.shadowBlur = 4;
+                        ctx.shadowColor = healthRatio > 0.6 ? '#4CAF50' : (healthRatio > 0.3 ? '#FFB300' : '#F44336');
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                    
+                    // Border cho thanh máu
+                    ctx.beginPath();
+                    ctx.roundRect(this.x, this.y - 12, barWidth, barHeight, barRadius);
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(this.x, this.y - 10, barWidth, barHeight);
+                    ctx.stroke();
                 }
             }
             takeDamage(dmg) {
@@ -1332,13 +1586,12 @@
             e.preventDefault();
             isMouseDown = true;
             
-            // Bắt đầu charge shot
-            if (!chargeDecaying) {
-                isChargingShot = true;
-                chargeStartTime = Date.now();
-                chargeLevel = 0;
-                document.getElementById('chargeContainer').style.display = 'block';
-            }
+            // Bắt đầu charge shot ngay lập tức (không cần đợi decay)
+            isChargingShot = true;
+            chargeStartTime = Date.now();
+            chargeLevel = 0;
+            chargeDecaying = false; // Dừng decay nếu đang diễn ra
+            document.getElementById('chargeContainer').style.display = 'block';
             
             startAutoShoot();
         });
@@ -1370,16 +1623,11 @@
                 playChargedShotSound(chargeLevel);
             }
             
-            // Bắt đầu hiệu ứng decay
+            // Reset charge để có thể charge lại ngay lập tức
             isChargingShot = false;
-            if (chargeLevel > 0.1) {
-                chargeDecaying = true;
-                chargeDecayStart = Date.now();
-                chargeLevelAtDecayStart = chargeLevel;
-            } else {
-                chargeLevel = 0;
-                document.getElementById('chargeContainer').style.display = 'none';
-            }
+            chargeLevel = 0;
+            chargeDecaying = false;
+            document.getElementById('chargeContainer').style.display = 'none';
             
             stopAutoShoot();
         });
@@ -1634,6 +1882,7 @@
                 if (globalFreezeTimeout <= 0) {
                     globalFreezeActive = false;
                     freezeOverlayAlpha = 0;
+                    snowflakes = []; // Xóa tất cả bông tuyết khi hiệu ứng kết thúc
                 }
             }
             
@@ -1743,25 +1992,37 @@
                 return !particle.isDead();
             });
             
-            // Update snowflakes
-            snowflakes.forEach(snowflake => {
-                snowflake.update();
-            });
-            // Giới hạn số lượng snowflakes
-            if (snowflakes.length > 30) {
-                snowflakes = snowflakes.slice(-20);
+            // Update snowflakes only when freeze is active
+            if (globalFreezeActive) {
+                snowflakes.forEach(snowflake => {
+                    snowflake.update();
+                });
+                // Giới hạn số lượng snowflakes
+                if (snowflakes.length > 30) {
+                    snowflakes = snowflakes.slice(-20);
+                }
             }
         }
         function drawGame() {
+            // Background - sử dụng ảnh nếu đã load, nếu không dùng gradient mặc định
+            if (backgroundLoaded) {
+                // Vẽ ảnh nền scale để fit canvas
+                ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+                
+                // Overlay tối để dễ nhìn game elements
+                ctx.fillStyle = 'rgba(0, 8, 20, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                // Fallback to gradient background
+                ctx.fillStyle = 'rgba(0, 8, 20, 0.15)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
             // Background với hiệu ứng freeze
             if (globalFreezeActive) {
                 ctx.fillStyle = `rgba(0, 170, 255, ${freezeOverlayAlpha * 0.3})`;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = `rgba(0, 8, 20, ${0.15 - freezeOverlayAlpha * 0.1})`;
-            } else {
-                ctx.fillStyle = 'rgba(0, 8, 20, 0.15)';
             }
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
             // Stars
             for (let i = 0; i < 60; i++) {
                 const x = (i * 137.456) % canvas.width;
@@ -1770,7 +2031,10 @@
                 ctx.fillRect(x, y, 1.5, 1.5);
             }
             particles.forEach(particle => particle.draw());
-            snowflakes.forEach(snowflake => snowflake.draw());
+            // Chỉ vẽ snowflakes khi freeze đang active
+            if (globalFreezeActive) {
+                snowflakes.forEach(snowflake => snowflake.draw());
+            }
             powerUps.forEach(powerUp => powerUp.draw());
             bullets.forEach(bullet => bullet.draw());
             enemies.forEach(enemy => enemy.draw());
@@ -1895,7 +2159,7 @@
             powerUps = [];
             particles = [];
             snowflakes = [];
-            freezeAmmo = 3;
+            freezeAmmo = 20;
             specialFreezeAmmo = 1; // Bắt đầu với 1 đạn đặc biệt băng
             console.log('Khởi tạo game - Đạn băng đặc biệt:', specialFreezeAmmo);
             autoFire = false;
@@ -1914,7 +2178,7 @@
             scoreEl.textContent = 'Điểm: 0';
             levelEl.textContent = 'Cấp: 1';
             ammoEl.textContent = 'Đạn: ∞';
-            freezeAmmoEl.textContent = 'Băng: 3';
+            freezeAmmoEl.textContent = 'Băng: 20';
             specialFreezeAmmoEl.textContent = 'Đặc biệt Băng: 1';
             specialTimerEl.textContent = 'Đặc biệt: OFF';
             updateMenuInfo();
